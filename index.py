@@ -3,9 +3,10 @@ import investpy as inv
 import datetime
 import history as hist
 import bollinger_bands as bollinger
-import styles  # Certifique-se de importar isso se necessário
-import streamlit_toggle as tog  # Certifique-se de importar isso se necessário
+import styles
+import streamlit_toggle as tog
 import time
+import pandas as pd  # Certifique-se de importar o pandas
 
 tickers = inv.get_stocks_list("brazil")
 
@@ -59,18 +60,24 @@ graph = st.empty()
 
 def prepare_history_visualization():
     history, instance = hist.get(ticker, init_date=init_date, end_date=end_date) if init_date else hist.get(ticker)
-    
-    # Use st.write ou st.metric para exibir informações na interface gráfica
-    current_value.metric("Current Value", f"R$ {round(history['Close'][history.index.max()],2)}", f"{round((history['Close'][history.index.max()] / history['Close'][history.index[-2]] - 1) * 100, 2)}%")
-    min_value.metric("Minimum Value", f"R$ {round(history['Close'].min(),2)}", f"{round((history['Close'].min() / history['Close'][history.index.max()] - 1) * 100,2)}%")
-    max_value.metric("Maximum Value", f"R$ {round(history['Close'].max(),2)}", f"{round((history['Close'].max() / history['Close'][history.index.max()] - 1) * 100,2)}%")
 
-    graph.plotly_chart(bollinger.get(ticker, history), use_container_width=True, sharing="streamlit")
+    max_index = history.index.max()
+    if pd.notna(max_index):
+        max_value = history['Close'][max_index]
+
+        # Use st.write ou st.metric para exibir informações na interface gráfica
+        current_value.metric("Current Value", f"R$ {round(max_value, 2)}", f"{round((max_value / history['Close'][history.index[-2]] - 1) * 100, 2)}%")
+        min_value.metric("Minimum Value", f"R$ {round(history['Close'].min(), 2)}", f"{round((history['Close'].min() / max_value - 1) * 100, 2)}")
+        max_value.metric("Maximum Value", f"R$ {round(max_value, 2)}", f"{round((max_value / history['Close'][max_index] - 1) * 100, 2)}")
+
+        bollinger_figure = bollinger.get(ticker, history)
+        graph.plotly_chart(bollinger_figure, use_container_width=True, sharing="streamlit")
+    else:
+        st.write("No data available for visualization.")
 
 if ticker and sleep_time:
-
     col1, col2, col3 = st.columns(3)
-    
+
     with col1:
         current_value = st.empty()
     with col2:
