@@ -28,42 +28,42 @@ with st.sidebar:
 
     number_of_days = st.number_input('Insert a number of days', value=30)
 
-    sleep_time = st.select_slider(
+    sleep_time = st.slider(
         'Select update time (seconds)',
-        options=[5, 10, 15, 30, 60]
+        min_value=5, max_value=60, step=5,
+        value=10
     )
 
     init_date = date_reference + datetime.timedelta(days=-(30 + number_of_days))
     end_date = date_reference
 
-    toogle_column1, toogle_column2 = st.columns(2)
-
-    with toogle_column1:
-        st.write(f"Auto Refresh ({sleep_time}s)")
-    with toogle_column2:
-        toogle = st.checkbox("Toggle Switch")
+    toogle = st.checkbox("Auto Refresh", value=False)
 
 def prepare_history_visualization():
     history, instance = hist.get(ticker, init_date=init_date, end_date=end_date) if init_date else hist.get(ticker)
-    print("CURRENT PRICE ->", history["Close"].iat[-1])
-    bollinger_figure = bollinger.get(ticker, history)
+    
+    if not history.empty:
+        print("CURRENT PRICE ->", history["Close"].iat[-1])
+        bollinger_figure = bollinger.get(ticker, history)
 
-    current_value.metric("Current Value", f"R$ {round(history['Close'][history.index.max()],2)}", f"{round((history['Close'][history.index.max()] / history['Close'][history.index[-2]] - 1) * 100, 2)}%")
-    min_value.metric("Minimum Value", f"R$ {round(history['Close'].min(),2)}", f"{round((history['Close'].min() / history['Close'][history.index.max()] - 1) * 100,2)}%")
-    max_value.metric("Maximum Value", f"R$ {round(history['Close'].max(),2)}", f"{round((history['Close'].max() / history['Close'][history.index.max()] - 1) * 100,2)}%")
+        current_value.metric("Current Value", f"R$ {round(history['Close'].iloc[-1], 2)}", f"{round(((history['Close'].iloc[-1] / history['Close'].iloc[-2]) - 1) * 100, 2)}%")
+        min_value.metric("Minimum Value", f"R$ {round(history['Close'].min(), 2)}", f"{round(((history['Close'].min() / history['Close'].iloc[-1]) - 1) * 100, 2)}%")
+        max_value.metric("Maximum Value", f"R$ {round(history['Close'].max(), 2)}", f"{round(((history['Close'].max() / history['Close'].iloc[-1]) - 1) * 100, 2)}%")
 
-    graph.plotly_chart(bollinger_figure, use_container_width=True, sharing="streamlit")
+        graph.plotly_chart(bollinger_figure, use_container_width=True, sharing="streamlit")
+    else:
+        st.write("No data available for visualization.")
 
 if ticker and sleep_time:
 
     col1, col2, col3 = st.columns(3)
-    
+
     with col1:
-        current_value = st.empty()
+        current_value = st.metric(label="Current Value", value="-")
     with col2:
-        min_value = st.empty()
+        min_value = st.metric(label="Minimum Value", value="-")
     with col3:
-        max_value = st.empty()
+        max_value = st.metric(label="Maximum Value", value="-")
     graph = st.empty()
 
     while toogle:
@@ -71,3 +71,4 @@ if ticker and sleep_time:
         time.sleep(sleep_time)
     else:
         prepare_history_visualization()
+
