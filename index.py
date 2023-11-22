@@ -41,7 +41,7 @@ with st.sidebar:
 
 def prepare_history_visualization():
     history, instance = hist.get(ticker, init_date=init_date, end_date=end_date) if init_date else hist.get(ticker)
-    
+
     if not history.empty:
         print("CURRENT PRICE ->", history["Close"].iat[-1])
         bollinger_figure = bollinger.get(ticker, history)
@@ -71,4 +71,5 @@ if ticker and sleep_time:
         time.sleep(sleep_time)
     else:
         prepare_history_visualization()
+
 
